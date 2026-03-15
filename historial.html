@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Historial - Claveles del Sur</title>
+    
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <!-- Nuestro CSS -->
+    <link rel="stylesheet" href="css/styles.css">
+    
+    <style>
+        .historial-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        
+        .historial-header h1 {
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+        
+        .historial-header p {
+            opacity: 0.9;
+            font-size: 16px;
+        }
+        
+        .back-button {
+            position: absolute;
+            top: 30px;
+            left: 30px;
+            background: rgba(255,255,255,0.2);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 50px;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: background 0.3s;
+        }
+        
+        .back-button:hover {
+            background: rgba(255,255,255,0.3);
+        }
+        
+        .historial-badge {
+            background: #764ba2;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 12px;
+            margin-left: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container" style="position: relative;">
+        <a href="index.html" class="back-button">
+            <i class="fas fa-arrow-left"></i>
+            Volver al inicio
+        </a>
+        
+        <div class="historial-header">
+            <i class="fas fa-archive" style="font-size: 48px; margin-bottom: 20px;"></i>
+            <h1>Historial de Trabajos</h1>
+            <p>Trabajos completados y archivados de meses anteriores</p>
+        </div>
+
+        <div class="mes-selector" style="justify-content: center; margin-bottom: 30px;">
+            <label for="mesSelect">Ver historial del mes:</label>
+            <select id="mesSelect" onchange="cargarHistorial()">
+                <option value="2026-02">Febrero 2026</option>
+                <option value="2026-01">Enero 2026</option>
+                <option value="2025-12">Diciembre 2025</option>
+            </select>
+        </div>
+
+        <div id="trabajosList" class="trabajos-list">
+            <div class="loading">Cargando historial...</div>
+        </div>
+    </div>
+
+    <script src="js/firebase-config.js"></script>
+    <script>
+        // Versión simplificada para historial
+        let mesActual = '2026-02';
+        
+        async function cargarHistorial() {
+            const select = document.getElementById('mesSelect');
+            mesActual = select.value;
+            
+            const contenedor = document.getElementById('trabajosList');
+            contenedor.innerHTML = '<div class="loading">Cargando historial...</div>';
+            
+            try {
+                const snapshot = await db.collection('trabajos')
+                    .where('mes', '==', mesActual)
+                    .where('historial', '==', true)
+                    .get();
+                
+                const trabajos = [];
+                snapshot.forEach(doc => {
+                    trabajos.push({
+                        id: doc.id,
+                        ...doc.data()
+                    });
+                });
+                
+                if (trabajos.length === 0) {
+                    contenedor.innerHTML = '<div class="no-trabajos">No hay trabajos en el historial para este mes</div>';
+                    return;
+                }
+                
+                let html = '';
+                trabajos.forEach(trabajo => {
+                    html += `
+                        <div class="trabajo-card ${trabajo.color}" data-id="${trabajo.id}">
+                            <div class="trabajo-header">
+                                <span class="trabajo-titulo">
+                                    ${trabajo.titulo}
+                                    <span class="historial-badge">Historial</span>
+                                </span>
+                                <span class="trabajo-estado">✅</span>
+                            </div>
+                            
+                            <div class="trabajo-info">
+                                <div class="info-item">
+                                    <i class="fas fa-building"></i>
+                                    <span><strong>Empresa:</strong> ${trabajo.trabajadorNombre || 'No asignado'}</span>
+                                </div>
+                                
+                                <div class="info-item">
+                                    <i class="fas fa-calendar"></i>
+                                    <span><strong>Completado:</strong> ${trabajo.fechaFinalizacion ? new Date(trabajo.fechaFinalizacion.toDate()).toLocaleDateString() : 'Fecha no disponible'}</span>
+                                </div>
+                                
+                                <div class="info-item">
+                                    <i class="fas fa-money-bill"></i>
+                                    <span><strong>Total:</strong> Bs. ${trabajo.montoTotal.toLocaleString()}</span>
+                                </div>
+                            </div>
+                            
+                            <div class="trabajo-acciones">
+                                <button class="btn btn-primary" onclick="verTrabajo('${trabajo.id}')">
+                                    <i class="fas fa-eye"></i> Ver detalles
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                contenedor.innerHTML = html;
+                
+            } catch (error) {
+                console.error('Error:', error);
+                contenedor.innerHTML = '<div class="no-trabajos">Error al cargar el historial</div>';
+            }
+        }
+        
+        function verTrabajo(id) {
+            window.location.href = `ver-trabajo.html?id=${id}`;
+        }
+        
+        // Cargar al iniciar
+        document.addEventListener('DOMContentLoaded', cargarHistorial);
+    </script>
+</body>
+</html>
